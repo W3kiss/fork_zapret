@@ -41,7 +41,8 @@ jobs:
         shell: pwsh
         run: |
           $dest = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'Zapret'
-          gh release download --repo Flowseal/zapret-discord-youtube --dir zapret-dl --clobber
+          gh release download --repo Flowseal/zapret-discord-youtube --pattern '*' --dir zapret-dl --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'failed to download the Flowseal release' }
           Get-ChildItem zapret-dl | Format-Table Name, Length
           $archive = Get-ChildItem zapret-dl -File | Where-Object { $_.Extension -eq '.zip' } | Select-Object -First 1
           if (-not $archive) { $archive = Get-ChildItem zapret-dl -File | Where-Object { $_.Extension -in '.rar', '.7z' } | Select-Object -First 1 }
