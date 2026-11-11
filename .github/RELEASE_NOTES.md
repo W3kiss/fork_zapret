@@ -1,0 +1,22 @@
+## Fork Zapret
+
+Современный лаунчер для [zapret](https://github.com/Flowseal/zapret-discord-youtube) от Flowseal. Автор — [W3kiss](https://github.com/W3kiss).
+
+### Что скачать
+
+- **`Fork-Zapret_x.y.z_x64-setup.exe`** — установщик (рекомендуется). zapret уже встроен.
+- **`Fork-Zapret_x.y.z_x64-portable.zip`** — портативная версия: распакуйте и запустите `Fork Zapret.exe` (папка `zapret` должна лежать рядом).
+
+Приложению нужны права администратора (драйвер WinDivert) — при запуске Windows покажет запрос UAC.
+
+### Возможности
+
+- Подключение одной кнопкой, выбор стратегии (`general`, `ALT`…`ALT13`, `FAKE TLS`, `SIMPLE FAKE`, `EXP`)
+- Автоподбор рабочей стратегии («Подобрать ALT»)
+- Game Filter и режимы IPSet (`loaded` / `none` / `any`)
+- Smart Mode, горячая клавиша `Ctrl+Shift+Z`, трей, автозапуск без UAC
+- Обновление zapret с резервной копией и откатом
+- Редактор списков доменов и IP
+- 5 языков, 8 тем (включая Star)
+
+> Fork Zapret — неофициальный лаунчер. Используйте его в соответствии с законодательством вашей страны.

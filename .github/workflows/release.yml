@@ -1,0 +1,87 @@
+name: Release
+
+# Builds Fork Zapret on Windows and publishes the installer + portable build to GitHub Releases.
+# Trigger: push a tag like v1.0.0, or run manually from the Actions tab.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # tauri.conf.json bundles ../../Zapret (relative to src-tauri) — i.e. a "Zapret"
+      # folder next to the repository, exactly like the local "Fork Zapret" layout.
+      - name: Fetch latest zapret build (Flowseal)
+        shell: pwsh
+        run: |
+          $dest = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'Zapret'
+          gh release download --repo Flowseal/zapret-discord-youtube --dir zapret-dl --clobber
+          Get-ChildItem zapret-dl | Format-Table Name, Length
+          $archive = Get-ChildItem zapret-dl -File | Where-Object { $_.Extension -eq '.zip' } | Select-Object -First 1
+          if (-not $archive) { $archive = Get-ChildItem zapret-dl -File | Where-Object { $_.Extension -in '.rar', '.7z' } | Select-Object -First 1 }
+          if (-not $archive) { throw 'No zapret archive found in the latest Flowseal release' }
+          7z x $archive.FullName -ozapret-x -y | Out-Null
+          $svc = Get-ChildItem zapret-x -Recurse -Filter service.bat | Select-Object -First 1
+          if (-not $svc) { throw 'service.bat not found in the archive' }
+          if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
+          Copy-Item $svc.Directory.FullName $dest -Recurse
+          if (-not (Test-Path "$dest/bin/winws.exe")) { throw 'winws.exe missing' }
+          Get-ChildItem $dest | Format-Table Name
+          Remove-Item zapret-dl, zapret-x -Recurse -Force
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run tauri build
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $ver = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          New-Item dist -ItemType Directory -Force | Out-Null
+          $setup = Get-ChildItem src-tauri/target/release/bundle/nsis -Filter *-setup.exe | Select-Object -First 1
+          Copy-Item $setup.FullName "dist/Fork-Zapret_${ver}_x64-setup.exe"
+          $p = 'portable/Fork Zapret'
+          New-Item $p -ItemType Directory -Force | Out-Null
+          Copy-Item src-tauri/target/release/fork-zapret.exe "$p/Fork Zapret.exe"
+          Copy-Item (Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'Zapret') "$p/zapret" -Recurse
+          Compress-Archive -Path $p -DestinationPath "dist/Fork-Zapret_${ver}_x64-portable.zip"
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - name: Publish release
+        shell: pwsh
+        run: |
+          $files = (Get-ChildItem dist -File).FullName
+          gh release view $env:TAG *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:TAG @files --clobber
+          } else {
+            gh release create $env:TAG @files --title "Fork Zapret $env:TAG" --notes-file .github/RELEASE_NOTES.md
+          }
