@@ -228,6 +228,21 @@
     }
   }
 
+  // ---------------- full stop (unload WinDivert driver)
+  let fullStopping = $state(false);
+  async function fullStop() {
+    if (!isTauri()) return;
+    fullStopping = true;
+    try {
+      await api.fullStop();
+      app.toast(t('toast.fullStopDone'), 'ok');
+    } catch (e) {
+      app.fail(e);
+    } finally {
+      fullStopping = false;
+    }
+  }
+
   const fmtSize = (b: number) => (b > 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.round(b / 1024)} KB`);
   const fmtDate = (ms: number) => new Date(ms).toLocaleString(i18n.lang);
 
@@ -443,6 +458,20 @@
         <div><h3>{t('set.theme')}</h3><p>{t('set.themeSub')}</p></div>
       </div>
       <ThemePicker value={app.config.theme} onchange={(id) => app.patchConfig({ theme: id })} />
+    </div>
+
+    <!-- Service control -->
+    <div class="card box full">
+      <div class="section-title">
+        <span class="ico"><Icon name="shield-off" /></span>
+        <div><h3>{t('set.service')}</h3><p>{t('set.serviceSub')}</p></div>
+      </div>
+      <div class="mbtns">
+        <button class="btn" onclick={fullStop} disabled={fullStopping}>
+          <Icon name={fullStopping ? 'loader' : 'power'} size={15} class={fullStopping ? 'spin' : ''} />{t('set.fullStop')}
+        </button>
+      </div>
+      <p class="path faint">{t('set.fullStopSub')}</p>
     </div>
 
     <!-- Misc / reset -->

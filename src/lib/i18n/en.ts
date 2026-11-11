@@ -160,6 +160,10 @@ const en: Dict = {
   'set.onboarding': 'Open welcome screen',
   'set.folder': 'zapret folder',
   'set.log': 'winws log',
+  'set.service': 'Service & driver',
+  'set.serviceSub': 'Fully stop zapret without closing the app',
+  'set.fullStop': 'Fully stop zapret',
+  'set.fullStopSub': 'Stops winws.exe and unloads the WinDivert driver. The app stays open — useful when zapret conflicts with a VPN.',
 
   'theme.star': 'Star',
   'theme.starSub': 'Stars follow your cursor',
@@ -219,7 +223,8 @@ const en: Dict = {
 
   'toast.connected': 'Connected · {name}',
   'toast.disconnected': 'zapret stopped',
-  'toast.saved': 'Saved'
+  'toast.saved': 'Saved',
+  'toast.fullStopDone': 'zapret stopped, WinDivert unloaded'
 };
 
 export default en;

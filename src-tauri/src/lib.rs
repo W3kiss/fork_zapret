@@ -122,6 +122,7 @@ pub fn run() {
             commands::disconnect,
             commands::toggle,
             commands::reconnect_if_running,
+            commands::zapret_full_stop,
             commands::set_game_filter,
             commands::set_ipset_mode,
             commands::update_ipset_list,

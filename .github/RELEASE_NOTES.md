@@ -2,6 +2,10 @@
 
 Современный лаунчер для [zapret](https://github.com/Flowseal/zapret-discord-youtube) от Flowseal. Автор — [W3kiss](https://github.com/W3kiss).
 
+### Новое в 1.1.0
+
+- Кнопка **«Полностью выключить zapret»** (Настройки → Служба и драйвер): останавливает winws.exe и выгружает драйвер WinDivert, не закрывая приложение. Удобно, когда zapret конфликтует с VPN.
+
 ### Что скачать
 
 - **`Fork-Zapret_x.y.z_x64-setup.exe`** — установщик (рекомендуется). zapret уже встроен.

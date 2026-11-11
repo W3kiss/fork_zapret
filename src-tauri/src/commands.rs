@@ -118,6 +118,12 @@ pub async fn reconnect_if_running(app: AppHandle) -> R<StatusPayload> {
     }
 }
 
+/// Fully stops zapret: kills winws and unloads the WinDivert driver (app stays open).
+#[tauri::command]
+pub async fn zapret_full_stop(app: AppHandle) -> R<StatusPayload> {
+    Ok(controller::full_stop(&app, "manual").await)
+}
+
 // ---------------------------------------------------------------- filters
 
 #[tauri::command]

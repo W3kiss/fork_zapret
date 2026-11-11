@@ -125,7 +125,8 @@ export const api = {
   openZapretFolder: () => invoke<void>('open_zapret_folder'),
   setTrayLabels: (labels: Record<string, string>) => invoke<void>('set_tray_labels', { labels }),
   quit: () => invoke<void>('quit_app'),
-  winwsLog: () => invoke<string>('winws_log')
+  winwsLog: () => invoke<string>('winws_log'),
+  fullStop: () => invoke<Status>('zapret_full_stop')
 };
 
 export function on<T>(event: string, cb: (payload: T) => void): Promise<UnlistenFn> {

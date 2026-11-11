@@ -158,6 +158,10 @@ const ru = {
   'set.onboarding': 'Открыть приветствие',
   'set.folder': 'Папка zapret',
   'set.log': 'Журнал winws',
+  'set.service': 'Служба и драйвер',
+  'set.serviceSub': 'Полная остановка zapret без закрытия приложения',
+  'set.fullStop': 'Полностью выключить zapret',
+  'set.fullStopSub': 'Останавливает winws.exe и выгружает драйвер WinDivert. Приложение остаётся открытым — полезно, когда zapret конфликтует с VPN.',
 
   'theme.star': 'Star',
   'theme.starSub': 'Звёзды следят за курсором',
@@ -217,7 +221,8 @@ const ru = {
 
   'toast.connected': 'Подключено · {name}',
   'toast.disconnected': 'zapret остановлен',
-  'toast.saved': 'Сохранено'
+  'toast.saved': 'Сохранено',
+  'toast.fullStopDone': 'zapret остановлен, WinDivert выгружен'
 };
 
 export default ru;

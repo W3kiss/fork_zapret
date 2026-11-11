@@ -114,6 +114,25 @@ pub async fn disconnect(app: &AppHandle, origin: &str) -> Result<StatusPayload, 
     Ok(stop_locked(app, origin))
 }
 
+/// Hard stop: kills winws.exe AND unloads the WinDivert driver, leaving the app open.
+/// Used to fully release WinDivert (e.g. so it stops fighting a VPN's TUN adapter).
+pub async fn full_stop(app: &AppHandle, origin: &str) -> StatusPayload {
+    let st = app.state::<AppState>();
+    if st.autopick_running.load(Ordering::SeqCst) {
+        st.autopick_cancel.store(true, Ordering::SeqCst);
+    }
+    let _g = st.op_lock.lock().await;
+    // Keep Smart Mode from immediately restarting winws after a deliberate hard stop.
+    if st.cfg().smart_mode {
+        st.smart_suppressed.store(true, Ordering::SeqCst);
+    }
+    st.engine.stop();
+    process::release_driver();
+    let s = StatusPayload { origin: Some(origin.into()), ..Default::default() };
+    publish(app, s.clone());
+    s
+}
+
 pub async fn toggle(app: &AppHandle, origin: &str) -> Result<StatusPayload, String> {
     let st = app.state::<AppState>();
     let running = st.engine.is_running();
