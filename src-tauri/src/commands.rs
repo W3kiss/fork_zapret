@@ -46,6 +46,7 @@ pub async fn get_snapshot(app: AppHandle) -> R<Snapshot> {
     let z = st.zapret_dir();
     let mut cfg = st.cfg();
     cfg.autostart = autostart::is_enabled();
+    let pick_results: Vec<StrategyResult> = st.pick_results.lock().unwrap().values().cloned().collect();
     Ok(Snapshot {
         config: cfg,
         status: st.engine.snapshot(),
@@ -59,7 +60,7 @@ pub async fn get_snapshot(app: AppHandle) -> R<Snapshot> {
         app_version: app.package_info().version.to_string(),
         autopick_running: st.autopick_running.load(std::sync::atomic::Ordering::SeqCst),
         stats: st.stats.snapshot(),
-        pick_results: st.pick_results.lock().unwrap().values().cloned().collect(),
+        pick_results,
     })
 }
 
@@ -376,5 +377,6 @@ pub async fn install_app_update(app: AppHandle) -> R<()> {
 
 #[tauri::command]
 pub fn get_pick_results(st: State<'_, AppState>) -> Vec<StrategyResult> {
-    st.pick_results.lock().unwrap().values().cloned().collect()
+    let list: Vec<StrategyResult> = st.pick_results.lock().unwrap().values().cloned().collect();
+    list
 }
