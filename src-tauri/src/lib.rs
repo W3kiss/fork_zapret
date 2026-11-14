@@ -154,6 +154,7 @@ pub fn run() {
             commands::reset_stats,
             commands::check_app_update,
             commands::install_app_update,
+            commands::get_pick_results,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Fork Zapret");

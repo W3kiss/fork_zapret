@@ -2,7 +2,9 @@
 
 use crate::config::{self, AppConfig};
 use crate::process::Engine;
+use crate::autopick::{self, StrategyResult};
 use crate::stats::StatsStore;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
@@ -16,6 +18,7 @@ pub struct AppPaths {
     pub avatar_file: PathBuf,
     pub winws_log: PathBuf,
     pub stats_file: PathBuf,
+    pub pick_file: PathBuf,
 }
 
 impl AppPaths {
@@ -29,6 +32,7 @@ impl AppPaths {
             avatar_file: data_dir.join("avatar.png"),
             winws_log: data_dir.join("winws.log"),
             stats_file: data_dir.join("stats.json"),
+            pick_file: data_dir.join("autopick.json"),
             data_dir,
         })
     }
@@ -47,11 +51,14 @@ pub struct AppState {
     /// so the watcher does not immediately reconnect.
     pub smart_suppressed: AtomicBool,
     pub stats: StatsStore,
+    /// Last auto-pick measurement per strategy file (availability + ping).
+    pub pick_results: Mutex<HashMap<String, StrategyResult>>,
 }
 
 impl AppState {
     pub fn new(paths: AppPaths, cfg: AppConfig) -> Self {
         let stats = StatsStore::load(&paths.stats_file);
+        let pick_results = Mutex::new(autopick::load_results(&paths.pick_file));
         Self {
             paths,
             config: Mutex::new(cfg),
@@ -62,6 +69,7 @@ impl AppState {
             updating: AtomicBool::new(false),
             smart_suppressed: AtomicBool::new(false),
             stats,
+            pick_results,
         }
     }
 

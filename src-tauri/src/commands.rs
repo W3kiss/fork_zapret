@@ -1,6 +1,7 @@
 //! Tauri commands exposed to the Svelte frontend.
 
 use crate::appupdate::{self, AppUpdateInfo};
+use crate::autopick::StrategyResult;
 use crate::config::{self, AppConfig};
 use crate::diagnostics::{self, Check};
 use crate::game_filter::{self, GameFilter};
@@ -36,6 +37,7 @@ pub struct Snapshot {
     pub app_version: String,
     pub autopick_running: bool,
     pub stats: Stats,
+    pub pick_results: Vec<StrategyResult>,
 }
 
 #[tauri::command]
@@ -57,6 +59,7 @@ pub async fn get_snapshot(app: AppHandle) -> R<Snapshot> {
         app_version: app.package_info().version.to_string(),
         autopick_running: st.autopick_running.load(std::sync::atomic::Ordering::SeqCst),
         stats: st.stats.snapshot(),
+        pick_results: st.pick_results.lock().unwrap().values().cloned().collect(),
     })
 }
 
@@ -367,4 +370,11 @@ pub async fn install_app_update(app: AppHandle) -> R<()> {
         tray::quit(&app2);
     });
     Ok(())
+}
+
+// ---------------------------------------------------------------- auto-pick results
+
+#[tauri::command]
+pub fn get_pick_results(st: State<'_, AppState>) -> Vec<StrategyResult> {
+    st.pick_results.lock().unwrap().values().cloned().collect()
 }

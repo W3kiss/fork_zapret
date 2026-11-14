@@ -9,6 +9,7 @@ import {
   type IpsetMode,
   type Snapshot,
   type Stats,
+  type StrategyResult,
   type Status,
   type StrategyInfo,
   type UpdateProgress
@@ -60,6 +61,15 @@ class AppStore {
   ipsetHasBackup = $state(false);
 
   stats = $state<Stats>({ ...EMPTY_STATS });
+  /** Last auto-pick measurement per strategy file. */
+  pickResults = $state<Record<string, StrategyResult>>({});
+
+  /** Best strategy by the same rule as the backend: most reachable, then lowest ping. */
+  bestStrategy = $derived.by(() => {
+    const list = Object.values(this.pickResults).filter((r) => r.passed > 0 && r.passed * 2 >= r.checks);
+    list.sort((a, b) => b.passed - a.passed || (a.latencyMs ?? Infinity) - (b.latencyMs ?? Infinity));
+    return list[0]?.file ?? null;
+  });
 
   autopick = $state<AutopickProgress | null>(null);
   autopickRunning = $state(false);
@@ -101,6 +111,7 @@ class AppStore {
     this.ipsetHasBackup = s.ipsetHasBackup;
     this.autopickRunning = s.autopickRunning;
     this.stats = s.stats ?? { ...EMPTY_STATS };
+    this.pickResults = Object.fromEntries((s.pickResults ?? []).map((r) => [r.file, r]));
     i18n.set(s.config.language);
   }
 
@@ -130,6 +141,12 @@ class AppStore {
 
     await on<AutopickProgress>(EVENTS.autopick, (p) => {
       this.autopick = p;
+      if (p.phase === 'result' && p.file) {
+        this.pickResults = {
+          ...this.pickResults,
+          [p.file]: { file: p.file, passed: p.passed, checks: p.checks, latencyMs: p.latencyMs, testedAt: Date.now() }
+        };
+      }
       if (p.phase === 'testing' || p.phase === 'result') {
         this.autopickRunning = true;
         return;
@@ -137,7 +154,8 @@ class AppStore {
       this.autopickRunning = false;
       if (p.phase === 'done' && p.found) {
         this.config = { ...this.config, strategy: p.found };
-        this.toast(t('dash.autopickFound', { name: this.strategyName(p.found) }), 'ok');
+        const ms = p.latencyMs != null ? ` · ${p.latencyMs} ${t('unit.ms')}` : '';
+        this.toast(t('dash.autopickFound', { name: this.strategyName(p.found) }) + ms, 'ok');
         if (this.config.sounds) sounds.found();
       } else if (p.phase === 'failed') {
         this.toast(t('dash.autopickFailed'), 'error');

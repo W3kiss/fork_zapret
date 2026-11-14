@@ -118,6 +118,8 @@
           value={app.config.strategy}
           disabled={app.autopickRunning}
           testing={testingName}
+          results={app.pickResults}
+          best={app.bestStrategy}
           onchange={(f) => app.selectStrategy(f)}
         />
         {#if app.autopickRunning}
@@ -148,11 +150,18 @@
               <span>{t('dash.autopickCancelled')}</span>
             {/if}
             {#if ap.phase === 'result'}
-              <span class="faint res">{t('dash.autopickResult', { name: ap.name ?? '', passed: ap.passed, checks: ap.checks })}</span>
+              <span class="faint res"
+                >{t('dash.autopickResult', { name: ap.name ?? '', passed: ap.passed, checks: ap.checks })}{#if ap.latencyMs != null}
+                  · {ap.latencyMs} {t('unit.ms')}{/if}</span
+              >
             {/if}
           </div>
           <div class="bar"><span style:width="{ap.phase === 'done' ? 100 : progress}%" class:done={ap.phase === 'done'}></span></div>
         </div>
+      {/if}
+
+      {#if !app.autopickRunning}
+        <div class="pick-hint faint">{t('dash.autopickHint')}</div>
       {/if}
 
       <button class="args-toggle" onclick={toggleArgs}>
@@ -358,6 +367,10 @@
   }
   .bar span.done {
     background: var(--ok);
+  }
+  .pick-hint {
+    font-size: 11.5px;
+    margin-top: -4px;
   }
   .args-toggle {
     align-self: flex-start;

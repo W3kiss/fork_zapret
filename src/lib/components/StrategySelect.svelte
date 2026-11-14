@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { StrategyInfo } from '$lib/api';
+  import type { StrategyInfo, StrategyResult } from '$lib/api';
+  import { t } from '$lib/i18n/index.svelte';
   import Icon from './Icon.svelte';
 
   interface Props {
@@ -7,13 +8,16 @@
     value: string;
     disabled?: boolean;
     testing?: string | null;
+    results?: Record<string, StrategyResult>;
+    best?: string | null;
     onchange?: (file: string) => void;
   }
-  let { items, value, disabled = false, testing = null, onchange }: Props = $props();
+  let { items, value, disabled = false, testing = null, results = {}, best = null, onchange }: Props = $props();
 
   let open = $state(false);
   let root: HTMLDivElement;
   const current = $derived(items.find((i) => i.file === value));
+  const currentResult = $derived(results[value]);
 
   $effect(() => {
     if (!open) return;
@@ -33,22 +37,48 @@
     open = false;
     if (file !== value) onchange?.(file);
   }
+
+  /** good = all targets reachable, mid = at least half, bad = less. */
+  function quality(r: StrategyResult | undefined): 'good' | 'mid' | 'bad' | 'none' {
+    if (!r) return 'none';
+    if (r.passed === r.checks && r.checks > 0) return 'good';
+    if (r.passed * 2 >= r.checks && r.passed > 0) return 'mid';
+    return 'bad';
+  }
+
+  function ping(r: StrategyResult | undefined): string {
+    if (!r) return '—';
+    if (r.latencyMs == null) return t('dash.noPing');
+    return `${r.latencyMs} ${t('unit.ms')}`;
+  }
 </script>
 
 <div class="select" bind:this={root}>
   <button class="trigger" class:open {disabled} onclick={() => (open = !open)}>
     <Icon name="zap" size={16} />
     <span class="v">{testing ?? current?.name ?? value}</span>
+    {#if !testing && currentResult}
+      <span class="badge {quality(currentResult)}">{ping(currentResult)}</span>
+    {/if}
     <span class="file">{current?.file ?? ''}</span>
     <Icon name="chevron-down" size={16} class="chev" />
   </button>
   {#if open}
     <div class="menu fade-in" role="listbox">
       {#each items as it (it.file)}
+        {@const r = results[it.file]}
         <button role="option" aria-selected={it.file === value} class:sel={it.file === value} onclick={() => pick(it.file)}>
-          <span class="n">{it.name}</span>
-          <span class="f">{it.file}</span>
-          {#if it.file === value}<Icon name="check" size={15} />{/if}
+          <span class="n">
+            {it.name}
+            {#if best === it.file}<span class="best"><Icon name="star" size={11} />{t('dash.best')}</span>{/if}
+          </span>
+          {#if r}
+            <span class="score {quality(r)}">{r.passed}/{r.checks}</span>
+            <span class="badge {quality(r)}">{ping(r)}</span>
+          {:else}
+            <span class="untested">{t('dash.notTested')}</span>
+          {/if}
+          <span class="mark">{#if it.file === value}<Icon name="check" size={15} />{/if}</span>
         </button>
       {/each}
     </div>
@@ -107,7 +137,7 @@
     left: 0;
     right: 0;
     bottom: calc(100% + 8px);
-    max-height: 340px;
+    max-height: 380px;
     overflow-y: auto;
     padding: 6px;
     border-radius: 16px;
@@ -135,13 +165,69 @@
     background: var(--accent-soft);
   }
   .n {
-    font-weight: 650;
-    min-width: 120px;
-  }
-  .f {
     flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 650;
+    min-width: 0;
+  }
+  .best {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--ok-soft);
+    color: var(--ok);
+    font-size: 10px;
+    font-weight: 700;
+  }
+  .score {
     font-family: var(--mono);
     font-size: 11px;
     color: var(--text-3);
+    min-width: 36px;
+    text-align: right;
+  }
+  .badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    min-width: 64px;
+    text-align: center;
+    border: 1px solid var(--border);
+  }
+  .good {
+    color: var(--ok);
+  }
+  .badge.good {
+    background: var(--ok-soft);
+    border-color: transparent;
+  }
+  .mid {
+    color: var(--warn);
+  }
+  .badge.mid {
+    background: color-mix(in srgb, var(--warn) 14%, transparent);
+    border-color: transparent;
+  }
+  .bad {
+    color: var(--danger);
+  }
+  .badge.bad {
+    background: var(--danger-soft);
+    border-color: transparent;
+  }
+  .untested {
+    font-size: 11px;
+    color: var(--text-3);
+  }
+  .mark {
+    width: 15px;
+    display: grid;
+    place-items: center;
   }
 </style>

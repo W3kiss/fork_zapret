@@ -102,6 +102,7 @@ export interface Snapshot {
   appVersion: string;
   autopickRunning: boolean;
   stats: Stats;
+  pickResults: StrategyResult[];
 }
 
 export interface AutopickProgress {
@@ -112,7 +113,16 @@ export interface AutopickProgress {
   name: string | null;
   passed: number;
   checks: number;
+  latencyMs: number | null;
   found: string | null;
+}
+
+export interface StrategyResult {
+  file: string;
+  passed: number;
+  checks: number;
+  latencyMs: number | null;
+  testedAt: number;
 }
 
 export interface UpdateInfo {
@@ -181,6 +191,7 @@ export const api = {
   applyProfile: (name: string) => invoke<void>('apply_profile', { name }),
   runDiagnostics: () => invoke<Check[]>('run_diagnostics'),
   getStats: () => invoke<Stats>('get_stats'),
+  getPickResults: () => invoke<StrategyResult[]>('get_pick_results'),
   resetStats: () => invoke<Stats>('reset_stats'),
   checkAppUpdate: () => invoke<AppUpdateInfo>('check_app_update'),
   installAppUpdate: () => invoke<void>('install_app_update')
