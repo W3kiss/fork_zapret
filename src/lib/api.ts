@@ -5,6 +5,23 @@ export type ConnState = 'disconnected' | 'connecting' | 'connected';
 export type IpsetMode = 'loaded' | 'none' | 'any';
 export type GameMode = 'disabled' | 'all' | 'tcp' | 'udp';
 
+export interface Profile {
+  name: string;
+  strategy: string;
+  gameFilterMode: GameMode;
+  gameFilterTcp: string;
+  gameFilterUdp: string;
+  ipsetMode: IpsetMode;
+}
+
+export interface Schedule {
+  id: string;
+  enabled: boolean;
+  action: 'connect' | 'disconnect';
+  time: string;
+  days: number[];
+}
+
 export interface AppConfig {
   language: string;
   theme: string;
@@ -18,6 +35,39 @@ export interface AppConfig {
   hotkey: string;
   sounds: boolean;
   zapretPath: string | null;
+  profiles: Profile[];
+  schedules: Schedule[];
+}
+
+export interface Check {
+  name: string;
+  status: 'ok' | 'warn' | 'fail';
+  detail: string;
+}
+
+export interface StatsSession {
+  strategy: string;
+  start: number;
+  seconds: number;
+  crashed: boolean;
+}
+
+export interface Stats {
+  sessions: number;
+  totalSeconds: number;
+  crashes: number;
+  perStrategy: Record<string, number>;
+  lastConnected: number | null;
+  recent: StatsSession[];
+}
+
+export interface AppUpdateInfo {
+  current: string;
+  latest: string;
+  hasUpdate: boolean;
+  url: string;
+  setup: string | null;
+  size: number;
 }
 
 export interface Status {
@@ -51,6 +101,7 @@ export interface Snapshot {
   isAdmin: boolean;
   appVersion: string;
   autopickRunning: boolean;
+  stats: Stats;
 }
 
 export interface AutopickProgress {
@@ -126,7 +177,13 @@ export const api = {
   setTrayLabels: (labels: Record<string, string>) => invoke<void>('set_tray_labels', { labels }),
   quit: () => invoke<void>('quit_app'),
   winwsLog: () => invoke<string>('winws_log'),
-  fullStop: () => invoke<Status>('zapret_full_stop')
+  fullStop: () => invoke<Status>('zapret_full_stop'),
+  applyProfile: (name: string) => invoke<void>('apply_profile', { name }),
+  runDiagnostics: () => invoke<Check[]>('run_diagnostics'),
+  getStats: () => invoke<Stats>('get_stats'),
+  resetStats: () => invoke<Stats>('reset_stats'),
+  checkAppUpdate: () => invoke<AppUpdateInfo>('check_app_update'),
+  installAppUpdate: () => invoke<void>('install_app_update')
 };
 
 export function on<T>(event: string, cb: (payload: T) => void): Promise<UnlistenFn> {

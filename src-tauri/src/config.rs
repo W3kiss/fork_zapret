@@ -20,6 +20,51 @@ pub fn default_smart_processes() -> Vec<String> {
     .collect()
 }
 
+/// A saved bundle of connection settings the user can switch to in one click.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct Profile {
+    pub name: String,
+    pub strategy: String,
+    pub game_filter_mode: String,
+    pub game_filter_tcp: String,
+    pub game_filter_udp: String,
+    pub ipset_mode: String,
+}
+
+impl Default for Profile {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            strategy: "general.bat".into(),
+            game_filter_mode: "disabled".into(),
+            game_filter_tcp: "1024-65535".into(),
+            game_filter_udp: "1024-65535".into(),
+            ipset_mode: "loaded".into(),
+        }
+    }
+}
+
+/// A time-based rule: connect or disconnect at HH:MM on the given weekdays.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct Schedule {
+    pub id: String,
+    pub enabled: bool,
+    /// "connect" | "disconnect"
+    pub action: String,
+    /// "HH:MM" 24h
+    pub time: String,
+    /// 0=Sunday .. 6=Saturday; empty means every day.
+    pub days: Vec<u8>,
+}
+
+impl Default for Schedule {
+    fn default() -> Self {
+        Self { id: String::new(), enabled: true, action: "connect".into(), time: "08:00".into(), days: vec![] }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct AppConfig {
@@ -35,6 +80,8 @@ pub struct AppConfig {
     pub hotkey: String,
     pub sounds: bool,
     pub zapret_path: Option<String>,
+    pub profiles: Vec<Profile>,
+    pub schedules: Vec<Schedule>,
 }
 
 impl Default for AppConfig {
@@ -52,6 +99,8 @@ impl Default for AppConfig {
             hotkey: "Ctrl+Shift+Z".into(),
             sounds: true,
             zapret_path: None,
+            profiles: Vec::new(),
+            schedules: Vec::new(),
         }
     }
 }

@@ -1,9 +1,12 @@
 //! Tauri commands exposed to the Svelte frontend.
 
+use crate::appupdate::{self, AppUpdateInfo};
 use crate::config::{self, AppConfig};
+use crate::diagnostics::{self, Check};
 use crate::game_filter::{self, GameFilter};
 use crate::process::{self, StatusPayload};
 use crate::state::AppState;
+use crate::stats::Stats;
 use crate::strategy::{self, StrategyInfo};
 use crate::updater::{self, BackupInfo, UpdateInfo};
 use crate::{autopick, autostart, controller, hotkey, ipset, lists, tray};
@@ -32,6 +35,7 @@ pub struct Snapshot {
     pub is_admin: bool,
     pub app_version: String,
     pub autopick_running: bool,
+    pub stats: Stats,
 }
 
 #[tauri::command]
@@ -52,6 +56,7 @@ pub async fn get_snapshot(app: AppHandle) -> R<Snapshot> {
         is_admin: process::is_elevated(),
         app_version: app.package_info().version.to_string(),
         autopick_running: st.autopick_running.load(std::sync::atomic::Ordering::SeqCst),
+        stats: st.stats.snapshot(),
     })
 }
 
@@ -293,4 +298,73 @@ pub fn quit_app(app: AppHandle) {
 #[tauri::command]
 pub fn winws_log(st: State<'_, AppState>) -> String {
     process::read_log_tail(&st.paths.winws_log, 200)
+}
+
+// ---------------------------------------------------------------- profiles
+
+/// Applies a saved profile: strategy, Game Filter and IPSet mode, then reconnects if running.
+#[tauri::command]
+pub async fn apply_profile(app: AppHandle, name: String) -> R<()> {
+    let st = app.state::<AppState>();
+    let prof = st
+        .cfg()
+        .profiles
+        .into_iter()
+        .find(|p| p.name == name)
+        .ok_or_else(|| "profile not found".to_string())?;
+    let z = st.zapret_dir();
+    let _ = game_filter::save(
+        &z,
+        &GameFilter { mode: prof.game_filter_mode.clone(), tcp: prof.game_filter_tcp.clone(), udp: prof.game_filter_udp.clone() },
+    );
+    // IPSet is best-effort: switching to "loaded" needs a backup that may be absent.
+    let _ = ipset::set_mode(&z, &prof.ipset_mode);
+    st.update_cfg(|c| c.strategy = prof.strategy.clone());
+    if st.engine.is_running() {
+        controller::connect(&app, None, "manual").await?;
+    }
+    Ok(())
+}
+
+// ---------------------------------------------------------------- diagnostics
+
+#[tauri::command]
+pub fn run_diagnostics(st: State<'_, AppState>) -> Vec<Check> {
+    diagnostics::run(&st.zapret_dir())
+}
+
+// ---------------------------------------------------------------- statistics
+
+#[tauri::command]
+pub fn get_stats(st: State<'_, AppState>) -> Stats {
+    st.stats.snapshot()
+}
+
+#[tauri::command]
+pub fn reset_stats(st: State<'_, AppState>) -> Stats {
+    st.stats.reset();
+    st.stats.snapshot()
+}
+
+// ---------------------------------------------------------------- app self-update
+
+#[tauri::command]
+pub async fn check_app_update(app: AppHandle) -> R<AppUpdateInfo> {
+    let current = app.package_info().version.to_string();
+    appupdate::check(&current).await.map_err(e)
+}
+
+/// Downloads the latest installer, launches it, and quits so it can replace files.
+#[tauri::command]
+pub async fn install_app_update(app: AppHandle) -> R<()> {
+    let current = app.package_info().version.to_string();
+    let installer = appupdate::download_installer(&current).await.map_err(e)?;
+    crate::util::hidden_cmd(&installer).spawn().map_err(e)?;
+    // Give the installer a moment to start, then exit this instance.
+    let app2 = app.clone();
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_millis(600)).await;
+        tray::quit(&app2);
+    });
+    Ok(())
 }

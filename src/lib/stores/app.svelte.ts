@@ -8,6 +8,7 @@ import {
   type GameFilter,
   type IpsetMode,
   type Snapshot,
+  type Stats,
   type Status,
   type StrategyInfo,
   type UpdateProgress
@@ -35,8 +36,12 @@ const DEFAULT_CONFIG: AppConfig = {
   smartProcesses: ['Discord.exe', 'chrome.exe', 'firefox.exe', 'msedge.exe', 'opera.exe', 'brave.exe', 'browser.exe', 'yandex.exe'],
   hotkey: 'Ctrl+Shift+Z',
   sounds: true,
-  zapretPath: null
+  zapretPath: null,
+  profiles: [],
+  schedules: []
 };
+
+const EMPTY_STATS: Stats = { sessions: 0, totalSeconds: 0, crashes: 0, perStrategy: {}, lastConnected: null, recent: [] };
 
 class AppStore {
   ready = $state(false);
@@ -53,6 +58,8 @@ class AppStore {
   gameFilter = $state<GameFilter>({ mode: 'disabled', tcp: '1024-65535', udp: '1024-65535' });
   ipsetMode = $state<IpsetMode>('loaded');
   ipsetHasBackup = $state(false);
+
+  stats = $state<Stats>({ ...EMPTY_STATS });
 
   autopick = $state<AutopickProgress | null>(null);
   autopickRunning = $state(false);
@@ -93,6 +100,7 @@ class AppStore {
     this.ipsetMode = s.ipsetMode;
     this.ipsetHasBackup = s.ipsetHasBackup;
     this.autopickRunning = s.autopickRunning;
+    this.stats = s.stats ?? { ...EMPTY_STATS };
     i18n.set(s.config.language);
   }
 

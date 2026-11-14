@@ -71,6 +71,10 @@ pub async fn start_locked(app: &AppHandle, file: &str, origin: &str) -> Result<S
         error: None,
         origin: Some(origin.into()),
     };
+    // Count real sessions for statistics, but not the throwaway probes of auto-pick.
+    if origin != "autopick" {
+        st.stats.begin(file);
+    }
     publish(app, status.clone());
     Ok(status)
 }
@@ -78,6 +82,7 @@ pub async fn start_locked(app: &AppHandle, file: &str, origin: &str) -> Result<S
 pub fn stop_locked(app: &AppHandle, origin: &str) -> StatusPayload {
     let st = app.state::<AppState>();
     st.engine.stop();
+    st.stats.end(false);
     let s = StatusPayload { origin: Some(origin.into()), ..Default::default() };
     publish(app, s.clone());
     s
@@ -127,6 +132,7 @@ pub async fn full_stop(app: &AppHandle, origin: &str) -> StatusPayload {
         st.smart_suppressed.store(true, Ordering::SeqCst);
     }
     st.engine.stop();
+    st.stats.end(false);
     process::release_driver();
     let s = StatusPayload { origin: Some(origin.into()), ..Default::default() };
     publish(app, s.clone());
@@ -155,6 +161,7 @@ pub fn spawn_watchdog(app: AppHandle) {
             let was_connected = st.engine.snapshot().state == ConnState::Connected;
             if let Some(code) = st.engine.poll_exit() {
                 if was_connected {
+                    st.stats.end(true);
                     let log = process::read_log_tail(&st.paths.winws_log, 4);
                     let msg = if log.is_empty() { format!("winws.exe exited ({code})") } else { log };
                     publish(&app, StatusPayload { error: Some(msg), ..Default::default() });

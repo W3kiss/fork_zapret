@@ -1,12 +1,42 @@
 <script lang="ts">
   import { app } from '$lib/stores/app.svelte';
   import { i18n, t } from '$lib/i18n/index.svelte';
-  import { api, isTauri, type BackupInfo, type GameMode, type IpsetMode, type UpdateInfo } from '$lib/api';
+  import { api, isTauri, type AppUpdateInfo, type BackupInfo, type GameMode, type IpsetMode, type UpdateInfo } from '$lib/api';
   import Icon from '$lib/components/Icon.svelte';
   import Toggle from '$lib/components/Toggle.svelte';
   import Segmented from '$lib/components/Segmented.svelte';
   import ThemePicker from '$lib/components/ThemePicker.svelte';
   import LanguagePicker from '$lib/components/LanguagePicker.svelte';
+  import Profiles from '$lib/components/Profiles.svelte';
+  import Diagnostics from '$lib/components/Diagnostics.svelte';
+  import Scheduler from '$lib/components/Scheduler.svelte';
+  import Stats from '$lib/components/Stats.svelte';
+
+  // ---------------- launcher self-update (#3)
+  let appInfo = $state<AppUpdateInfo | null>(null);
+  let appChecking = $state(false);
+  let appInstalling = $state(false);
+  async function checkApp() {
+    if (!isTauri()) return;
+    appChecking = true;
+    try {
+      appInfo = await api.checkAppUpdate();
+    } catch (e) {
+      app.fail(e);
+    } finally {
+      appChecking = false;
+    }
+  }
+  async function installApp() {
+    if (!isTauri()) return;
+    appInstalling = true;
+    try {
+      await api.installAppUpdate();
+    } catch (e) {
+      app.fail(e);
+      appInstalling = false;
+    }
+  }
 
   // ---------------- smart mode processes
   let newProc = $state('');
@@ -425,6 +455,33 @@
       <div class="divider"></div>
 
       <div class="section-title">
+        <span class="ico"><Icon name="rocket" /></span>
+        <div><h3>{t('set.appUpdate')}</h3><p>{t('set.appUpdateSub')}</p></div>
+      </div>
+      <div class="vers">
+        <div class="ver"><span>{t('set.localVer')}</span><b>{app.appVersion}</b></div>
+        <Icon name="arrow-right" size={16} class="faint" />
+        <div class="ver"><span>{t('set.latestVer')}</span><b>{appInfo?.latest ?? '—'}</b></div>
+        <div class="vbtns">
+          <button class="btn sm" onclick={checkApp} disabled={appChecking || appInstalling}>
+            <Icon name={appChecking ? 'loader' : 'refresh'} size={14} class={appChecking ? 'spin' : ''} />{t('set.check')}
+          </button>
+          {#if appInfo?.hasUpdate}
+            <button class="btn sm primary" onclick={installApp} disabled={appInstalling}>
+              <Icon name={appInstalling ? 'loader' : 'download'} size={14} class={appInstalling ? 'spin' : ''} />{t('set.install')}
+            </button>
+          {/if}
+        </div>
+      </div>
+      {#if appInfo}
+        <div class="note" class:ok={!appInfo.hasUpdate}>
+          {appInfo.hasUpdate ? t('set.appUpdateAvail', { v: appInfo.latest }) : t('set.appUpToDate')}
+        </div>
+      {/if}
+
+      <div class="divider"></div>
+
+      <div class="section-title">
         <span class="ico"><Icon name="history" /></span>
         <div><h3>{t('set.backups')}</h3><p>{t('set.backupsSub')}</p></div>
         <span class="push"><button class="btn sm" onclick={createBackup} disabled={updBusy}><Icon name="archive" size={14} />{t('set.createBackup')}</button></span>
@@ -444,6 +501,14 @@
         {/each}
       </div>
     </div>
+
+    <Profiles />
+
+    <Diagnostics />
+
+    <Scheduler />
+
+    <Stats />
 
     <!-- Appearance -->
     <div class="card box full">

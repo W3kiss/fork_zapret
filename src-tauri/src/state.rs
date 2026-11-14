@@ -2,6 +2,7 @@
 
 use crate::config::{self, AppConfig};
 use crate::process::Engine;
+use crate::stats::StatsStore;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 use std::sync::Mutex;
@@ -14,6 +15,7 @@ pub struct AppPaths {
     pub backups_dir: PathBuf,
     pub avatar_file: PathBuf,
     pub winws_log: PathBuf,
+    pub stats_file: PathBuf,
 }
 
 impl AppPaths {
@@ -26,6 +28,7 @@ impl AppPaths {
             backups_dir: data_dir.join("backups"),
             avatar_file: data_dir.join("avatar.png"),
             winws_log: data_dir.join("winws.log"),
+            stats_file: data_dir.join("stats.json"),
             data_dir,
         })
     }
@@ -43,10 +46,12 @@ pub struct AppState {
     /// Set when the user disconnected manually while Smart Mode is on,
     /// so the watcher does not immediately reconnect.
     pub smart_suppressed: AtomicBool,
+    pub stats: StatsStore,
 }
 
 impl AppState {
     pub fn new(paths: AppPaths, cfg: AppConfig) -> Self {
+        let stats = StatsStore::load(&paths.stats_file);
         Self {
             paths,
             config: Mutex::new(cfg),
@@ -56,6 +61,7 @@ impl AppState {
             autopick_cancel: AtomicBool::new(false),
             updating: AtomicBool::new(false),
             smart_suppressed: AtomicBool::new(false),
+            stats,
         }
     }
 

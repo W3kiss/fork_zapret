@@ -1,18 +1,22 @@
 //! Fork Zapret — desktop launcher for zapret (Flowseal).
 //! Author: W3kiss — https://github.com/W3kiss
 
+mod appupdate;
 mod autopick;
 mod autostart;
 mod commands;
 mod config;
 mod controller;
+mod diagnostics;
 mod game_filter;
 mod hotkey;
 mod ipset;
 mod lists;
 mod process;
+mod schedule;
 mod smart_mode;
 mod state;
+mod stats;
 mod strategy;
 mod tray;
 mod updater;
@@ -84,6 +88,7 @@ pub fn run() {
             }
             controller::spawn_watchdog(handle.clone());
             smart_mode::spawn(handle.clone());
+            schedule::spawn(handle.clone());
 
             if let Some(w) = app.get_webview_window("main") {
                 if !start_hidden {
@@ -143,6 +148,12 @@ pub fn run() {
             commands::set_tray_labels,
             commands::quit_app,
             commands::winws_log,
+            commands::apply_profile,
+            commands::run_diagnostics,
+            commands::get_stats,
+            commands::reset_stats,
+            commands::check_app_update,
+            commands::install_app_update,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Fork Zapret");
